@@ -51,18 +51,6 @@
       align-items: center;
     }
 
-    /* Black strip to hide status bar content */
-    .status-bar-cover {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: env(safe-area-inset-top, 54px);
-      min-height: 54px;
-      background: #000000;
-      z-index: 200;
-    }
-
     /* Top bar: back arrow + close button */
     .top-bar {
       position: fixed;
@@ -380,9 +368,6 @@
 <body>
 
   <!-- LINE QR Code Screen -->
-  <!-- Black strip covering status bar -->
-  <div class="status-bar-cover"></div>
-
   <div class="line-screen" id="line-screen">
     <!-- Top bar -->
     <div class="top-bar">
