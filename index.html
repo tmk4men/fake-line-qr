@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="LINE">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <title>LINE</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html {
+      overscroll-behavior: none;
+      overflow: hidden;
+      position: fixed;
+      width: 100%;
+      height: 100%;
+    }
+
+    body {
+      position: fixed;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
+      -webkit-text-size-adjust: 100%;
+      -webkit-font-smoothing: antialiased;
+      -webkit-tap-highlight-color: transparent;
+      -webkit-touch-callout: none;
+      user-select: none;
+      background: #FFFFFF;
+    }
+
+    /* ===== LINE QR Code Screen ===== */
+    .line-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #FFFFFF;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* Black strip to hide status bar content */
+    .status-bar-cover {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: env(safe-area-inset-top);
+      background: #000000;
+      z-index: 200;
+    }
+
+    /* Top bar: back arrow + close button */
+    .top-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: calc(48px + env(safe-area-inset-top));
+      padding-top: env(safe-area-inset-top);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-left: 16px;
+      padding-right: 16px;
+      z-index: 100;
+      background: #FFFFFF;
+    }
+
+    .top-bar-back {
+      width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: default;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .top-bar-back svg {
+      width: 24px;
+      height: 24px;
+      stroke: #333333;
+      stroke-width: 2;
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .top-bar-close {
+      width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: default;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .top-bar-close svg {
+      width: 22px;
+      height: 22px;
+      stroke: #333333;
+      stroke-width: 2;
+      fill: none;
+      stroke-linecap: round;
+    }
+
+    /* Main content */
+    .line-content {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      flex: 1;
+      padding-top: calc(48px + env(safe-area-inset-top));
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    .qr-code-img {
+      width: 68vw;
+      max-width: 300px;
+      height: auto;
+      aspect-ratio: 1;
+      image-rendering: pixelated;
+    }
+
+    .qr-description {
+      color: #999999;
+      font-size: 14px;
+      text-align: center;
+      line-height: 1.6;
+      margin-top: 24px;
+      padding: 0 32px;
+    }
+
+    /* Action buttons */
+    .qr-actions {
+      display: flex;
+      justify-content: center;
+      gap: 40px;
+      margin-top: 32px;
+    }
+
+    .qr-action-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      color: #333333;
+      font-size: 12px;
+      font-family: inherit;
+      background: none;
+      border: none;
+      cursor: default;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .qr-action-icon {
+      width: 48px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .qr-action-icon svg {
+      width: 28px;
+      height: 28px;
+      stroke: #06C755;
+      fill: none;
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    /* Refresh button */
+    .refresh-btn {
+      margin-top: 32px;
+      padding: 10px 28px;
+      border: 1.5px solid #DDDDDD;
+      border-radius: 24px;
+      background: #FFFFFF;
+      color: #333333;
+      font-size: 14px;
+      font-family: inherit;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: default;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .refresh-btn svg {
+      width: 16px;
+      height: 16px;
+      stroke: #333333;
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    /* ===== iOS Alert Dialog ===== */
+    .alert-backdrop {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.4);
+      z-index: 500;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+
+    .alert-backdrop.show {
+      display: flex;
+      opacity: 1;
+    }
+
+    .alert-dialog {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-radius: 14px;
+      width: 270px;
+      overflow: hidden;
+      transform: scale(1.05);
+      opacity: 0;
+      transition: transform 0.2s ease, opacity 0.2s ease;
+    }
+
+    .alert-backdrop.show .alert-dialog {
+      transform: scale(1);
+      opacity: 1;
+    }
+
+    .alert-message {
+      padding: 20px 16px;
+      text-align: center;
+      font-size: 13px;
+      line-height: 1.5;
+      color: #000000;
+      font-family: inherit;
+    }
+
+    .alert-buttons {
+      display: flex;
+      border-top: 0.5px solid rgba(0, 0, 0, 0.2);
+    }
+
+    .alert-btn {
+      flex: 1;
+      padding: 12px 0;
+      border: none;
+      background: none;
+      font-size: 17px;
+      font-family: inherit;
+      cursor: default;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .alert-btn-cancel {
+      color: #007AFF;
+      font-weight: 400;
+      border-right: 0.5px solid rgba(0, 0, 0, 0.2);
+    }
+
+    .alert-btn-ok {
+      color: #007AFF;
+      font-weight: 600;
+    }
+
+    .alert-btn:active {
+      background: rgba(0, 0, 0, 0.05);
+    }
+
+    /* ===== Shutdown Overlay ===== */
+    .shutdown-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: #000000;
+      opacity: 0;
+      pointer-events: none;
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .shutdown-overlay.phase-dim {
+      pointer-events: all;
+      animation: screenDim 1.5s ease-in forwards;
+    }
+
+    .shutdown-overlay.phase-spinner {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .shutdown-overlay.phase-black {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    @keyframes screenDim {
+      0%   { opacity: 0; }
+      100% { opacity: 1; }
+    }
+
+    /* ===== iOS Spinner ===== */
+    .ios-spinner {
+      position: relative;
+      width: 40px;
+      height: 40px;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .ios-spinner.visible {
+      opacity: 1;
+    }
+
+    .ios-spinner.fade-out {
+      opacity: 0;
+      transition: opacity 0.5s ease;
+    }
+
+    .ios-spinner .blade {
+      position: absolute;
+      left: 44.5%;
+      top: 37%;
+      width: 11%;
+      height: 26%;
+      border-radius: 50px;
+      background-color: transparent;
+      animation: spinnerFade 1s linear infinite;
+    }
+
+    .ios-spinner .blade:nth-child(1)  { transform: rotate(0deg)   translate(0, -142%); animation-delay: -0.0000s; }
+    .ios-spinner .blade:nth-child(2)  { transform: rotate(30deg)  translate(0, -142%); animation-delay: -0.9167s; }
+    .ios-spinner .blade:nth-child(3)  { transform: rotate(60deg)  translate(0, -142%); animation-delay: -0.8333s; }
+    .ios-spinner .blade:nth-child(4)  { transform: rotate(90deg)  translate(0, -142%); animation-delay: -0.7500s; }
+    .ios-spinner .blade:nth-child(5)  { transform: rotate(120deg) translate(0, -142%); animation-delay: -0.6667s; }
+    .ios-spinner .blade:nth-child(6)  { transform: rotate(150deg) translate(0, -142%); animation-delay: -0.5833s; }
+    .ios-spinner .blade:nth-child(7)  { transform: rotate(180deg) translate(0, -142%); animation-delay: -0.5000s; }
+    .ios-spinner .blade:nth-child(8)  { transform: rotate(210deg) translate(0, -142%); animation-delay: -0.4167s; }
+    .ios-spinner .blade:nth-child(9)  { transform: rotate(240deg) translate(0, -142%); animation-delay: -0.3333s; }
+    .ios-spinner .blade:nth-child(10) { transform: rotate(270deg) translate(0, -142%); animation-delay: -0.2500s; }
+    .ios-spinner .blade:nth-child(11) { transform: rotate(300deg) translate(0, -142%); animation-delay: -0.1667s; }
+    .ios-spinner .blade:nth-child(12) { transform: rotate(330deg) translate(0, -142%); animation-delay: -0.0833s; }
+
+    @keyframes spinnerFade {
+      0%   { background-color: #FFFFFF; }
+      100% { background-color: rgba(255, 255, 255, 0.15); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- LINE QR Code Screen -->
+  <!-- Black strip covering status bar -->
+  <div class="status-bar-cover"></div>
+
+  <div class="line-screen" id="line-screen">
+    <!-- Top bar -->
+    <div class="top-bar">
+      <div class="top-bar-back">
+        <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+      </div>
+      <div class="top-bar-close">
+        <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </div>
+    </div>
+
+    <!-- Content -->
+    <div class="line-content">
+      <img src="画像/QR.png" alt="QR Code" class="qr-code-img">
+
+      <p class="qr-description">QRコードやリンクを使って、友だち<br>追加しましょう。</p>
+
+      <div class="qr-actions">
+        <button class="qr-action-btn" type="button">
+          <div class="qr-action-icon">
+            <!-- Link icon -->
+            <svg viewBox="0 0 24 24">
+              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+            </svg>
+          </div>
+          <span>リンクをコピー</span>
+        </button>
+        <button class="qr-action-btn" type="button">
+          <div class="qr-action-icon">
+            <!-- Share / upload icon -->
+            <svg viewBox="0 0 24 24">
+              <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+              <polyline points="16 6 12 2 8 6"/>
+              <line x1="12" y1="2" x2="12" y2="15"/>
+            </svg>
+          </div>
+          <span>シェア</span>
+        </button>
+        <button class="qr-action-btn" type="button">
+          <div class="qr-action-icon">
+            <!-- Download icon -->
+            <svg viewBox="0 0 24 24">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+          </div>
+          <span>保存</span>
+        </button>
+      </div>
+
+      <button class="refresh-btn" type="button" id="trigger">
+        <svg viewBox="0 0 24 24">
+          <polyline points="23 4 23 10 17 10"/>
+          <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+        </svg>
+        更新
+      </button>
+    </div>
+  </div>
+
+  <!-- iOS Alert Dialog -->
+  <div class="alert-backdrop" id="alert-backdrop">
+    <div class="alert-dialog">
+      <div class="alert-message">既存のQRコードやリンクは無効になります。QRコードを更新しますか？</div>
+      <div class="alert-buttons">
+        <button class="alert-btn alert-btn-cancel" id="alert-cancel" type="button">キャンセル</button>
+        <button class="alert-btn alert-btn-ok" id="alert-ok" type="button">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Shutdown Overlay -->
+  <div class="shutdown-overlay" id="shutdown-overlay">
+    <div class="ios-spinner" id="spinner">
+      <div class="blade"></div>
+      <div class="blade"></div>
+      <div class="blade"></div>
+      <div class="blade"></div>
+      <div class="blade"></div>
+      <div class="blade"></div>
+      <div class="blade"></div>
+      <div class="blade"></div>
+      <div class="blade"></div>
+      <div class="blade"></div>
+      <div class="blade"></div>
+      <div class="blade"></div>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      var refreshBtn = document.getElementById('trigger');
+      var alertBackdrop = document.getElementById('alert-backdrop');
+      var alertCancel = document.getElementById('alert-cancel');
+      var alertOk = document.getElementById('alert-ok');
+      var overlay = document.getElementById('shutdown-overlay');
+      var spinner = document.getElementById('spinner');
+      var shutdownStarted = false;
+
+      // Tap refresh → show iOS alert dialog
+      refreshBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        if (shutdownStarted) return;
+        alertBackdrop.classList.add('show');
+      });
+
+      // Cancel → close dialog
+      alertCancel.addEventListener('click', function(e) {
+        e.preventDefault();
+        alertBackdrop.classList.remove('show');
+      });
+
+      // OK → close dialog, start shutdown
+      alertOk.addEventListener('click', function(e) {
+        e.preventDefault();
+        alertBackdrop.classList.remove('show');
+        startShutdown();
+      });
+
+      function startShutdown() {
+        shutdownStarted = true;
+
+        // Phase 1: Dim screen (1.5s)
+        overlay.classList.add('phase-dim');
+
+        // Phase 2: Show spinner after dim
+        setTimeout(function() {
+          overlay.classList.remove('phase-dim');
+          overlay.classList.add('phase-spinner');
+          spinner.classList.add('visible');
+        }, 1500);
+
+        // Phase 3: Fade out spinner
+        setTimeout(function() {
+          spinner.classList.add('fade-out');
+        }, 5000);
+
+        // Phase 4: Full black forever
+        setTimeout(function() {
+          spinner.style.display = 'none';
+          overlay.classList.remove('phase-spinner');
+          overlay.classList.add('phase-black');
+          requestWakeLock();
+        }, 5500);
+      }
+
+      async function requestWakeLock() {
+        try {
+          if ('wakeLock' in navigator) {
+            await navigator.wakeLock.request('screen');
+          }
+        } catch (e) {}
+      }
+
+      // Prevent scrolling during shutdown
+      document.addEventListener('touchmove', function(e) {
+        if (shutdownStarted) {
+          e.preventDefault();
+        }
+      }, { passive: false });
+
+      // Prevent context menu
+      document.addEventListener('contextmenu', function(e) {
+        e.preventDefault();
+      });
+    })();
+  </script>
+</body>
+</html>
