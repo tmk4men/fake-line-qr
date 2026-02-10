@@ -491,6 +491,8 @@
 
       function startShutdown() {
         shutdownStarted = true;
+        document.body.style.background = '#000000';
+        document.documentElement.style.background = '#000000';
 
         // Phase 1: Dim screen (1.5s)
         overlay.classList.add('phase-dim');
